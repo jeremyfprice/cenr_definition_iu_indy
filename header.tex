@@ -1,0 +1,97 @@
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{ragged2e}
+\usepackage{changepage}
+
+% Define colors
+\definecolor{MyMaroon}{HTML}{990000}
+\definecolor{AnchoringColor}{HTML}{4A4A4D}  % Dark slate gray
+\definecolor{IntegrationColor}{HTML}{3A6F6A}  % Muted teal
+\definecolor{LeverageColor}{HTML}{C6A15B}    % Ochre gold
+\definecolor{highlightyellow}{HTML}{fffaa0}  % Light yellow for highlighting
+
+% Badge colors
+\definecolor{foundationvery}{HTML}{4A4A4A}
+\definecolor{foundationhigh}{HTML}{777777}
+\definecolor{integrationvery}{HTML}{6B938F}
+\definecolor{integrationhigh}{HTML}{9CB7B4}
+\definecolor{leveragevery}{HTML}{D4B883}
+\definecolor{leveragehigh}{HTML}{E2D0AD}
+
+% Badge commands
+\newcommand{\badge}[1]{%
+  \tikz[baseline=(char.base)]{
+      \node[shape=rectangle, rounded corners=3pt, inner sep=2pt,
+            fill=#1, text=white, font=\tiny\bfseries] (char) {%
+        \ifstrequal{#1}{foundationvery}{FV}{%
+        \ifstrequal{#1}{foundationhigh}{FH}{%
+        \ifstrequal{#1}{integrationvery}{IV}{%
+        \ifstrequal{#1}{integrationhigh}{IH}{%
+        \ifstrequal{#1}{leveragevery}{LV}{%
+        \ifstrequal{#1}{leveragehigh}{LH}{%
+        ?}}}}}}%
+      };
+  }%
+}
+
+% Highlight command for yellow highlighting that allows line breaks
+\usepackage{soul}
+\sethlcolor{highlightyellow}
+\newcommand{\highlight}[1]{%
+  \hl{\textbf{#1}}%
+}
+
+\newcommand{\inlinebadgegroup}[2]{%
+  \highlight{#1}~#2%
+}
+
+% Suppress default \maketitle to avoid \crcr errors
+\renewcommand{\maketitle}{}
+
+% Make entire document ragged right (left-aligned)
+\RaggedRight
+
+% Margin note width settings to use full 2.5-inch right margin
+\usepackage{marginnote}
+\setlength{\marginparwidth}{2.2in}
+\setlength{\marginparsep}{0.15in}
+\renewcommand*{\raggedleftmarginnote}{\RaggedRight}
+\renewcommand*{\raggedrightmarginnote}{\RaggedRight}
+
+
+
+
+% Default section format (maroon)
+\titleformat{\section}
+  {\color{MyMaroon}\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\color{MyMaroon}\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\color{MyMaroon}\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}
+  {\color{MyMaroon}\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titleformat{\subparagraph}
+  {\color{MyMaroon}\normalfont\normalsize\bfseries}{\thesubparagraph}{1em}{}
+
+% Redefine section commands for specific sections
+\let\oldsection\section
+\renewcommand{\section}[2][\relax]{%
+  \ifstrequal{#2}{Mapping the Topography of Community Engaged Research}{%
+    \oldsection[#2]{\color{AnchoringColor}#2}%
+  }{%
+    \ifstrequal{#2}{Mapping the Infrastructure of Community Engaged Research}{%
+      \oldsection[#2]{\color{IntegrationColor}#2}%
+    }{%
+      \ifstrequal{#2}{Mapping the Architecture of Community Engaged Research}{%
+        \oldsection[#2]{\color{LeverageColor}#2}%
+      }{%
+        \ifx\relax#1\relax\oldsection{#2}\else\oldsection[#1]{#2}\fi
+      }%
+    }%
+  }%
+}

@@ -1,0 +1,696 @@
+---
+title: "Defining Community-Engaged Research"
+subtitle: "A Collaboratively Constructed Map of the Contours of Community Engaged Research at Indiana University Indianapolis"
+author:
+  - "The Community Engaged Research Faculty Circle, IU Indianapolis"
+  - "Jeremy Price, IU Indianapolis"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+format:
+  pdf:
+    toc: false
+    number-sections: false
+    colorlinks: false
+    documentclass: article
+    mainfont: "IBM Plex Sans"
+    sansfont: "IBM Plex Sans Condensed"
+    monofont: "IBM Plex Mono"
+    fontsize: 12pt
+    pdf-engine: xelatex
+    keep-tex: true
+    geometry:
+      - top=1in
+      - bottom=1in
+      - left=1in
+      - right=2.5in
+    classoption: [notitlepage]
+    include-in-header:
+      - header.tex
+      - text: |
+          \usepackage{amsmath}
+          \usepackage{draftwatermark}
+          \SetWatermarkText{DRAFT}
+          \SetWatermarkScale{1.25}
+          \SetWatermarkColor[gray]{0.925}
+          \SetWatermarkAngle{45}
+    include-before-body: title-page.tex
+  html:
+    toc: false
+    number-sections: false
+    page-layout: full
+    fig-format: png
+    theme: sandstone
+    fontsize: 16pt
+    css: styles.css
+    main-container: true
+    margin-header: 0.5in
+    margin-footer: 0.5in
+    margin-left: auto
+    margin-right: auto
+    max-width: 90%
+    include-in-header:
+      text: |
+        <style>
+        body::after {
+          content: "DRAFT";
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-15deg);
+          font-size: 120px;
+          opacity: 0.1;
+          z-index: 9999;
+          pointer-events: none;
+          font-family: "Azeret Mono", monospace;
+          color: #191919;
+          font-weight: bold;
+        }
+        .column-margin.column-container p {
+          font-size: 10pt;
+        }
+        </style>
+  typst:
+    include-in-header: styles.typ
+    document-class: article
+    toc: false
+    number-sections: false
+    papersize: us-letter
+    fig-format: png
+    margin:
+      x: 1in
+      y: 1in
+filters:
+  - mcanouil/badge
+badge:
+  - key: anchoring-very
+    colour: "#777777"
+    class: ""
+    href: ""
+  - key: anchoring-high
+    colour: "#4A4A4A"
+    class: ""
+    href: ""
+  - key: integration-very
+    colour: "#6B938F"
+    class: ""
+    href: ""
+  - key: integration-high
+    colour: "#9CB7B4"
+    class: ""
+    href: ""
+  - key: leverage-very
+    colour: "#D4B883"
+    class: ""
+    href: ""
+  - key: leverage-high
+    colour: "#E2D0AD"
+    class: ""
+    href: ""
+---
+
+```{r setup, include=FALSE}
+# Set the graphics device to 'ragg_png' to avoid issues with system libraries
+# You may need to install this package first: install.packages("ragg")
+knitr::opts_chunk$set(
+  #dev = "ragg_png",
+  echo = FALSE,         # Show code
+  warning = FALSE,     # Suppress warnings
+  message = FALSE,     # Suppress package messages
+  fig.width = 8,       # Default figure width
+  fig.height = 6,      # Default figure height
+  fig.align = 'center' # Center align figures
+)
+```
+
+```{r libraries}
+# Data manipulation
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# Analysis
+library(FactoMineR)
+library(factoextra)
+library(cluster)
+library(igraph)
+library(ggraph)
+library(centiserve)
+library(expm)
+
+# Visualization
+library(ggplot2)
+library(ggrepel)
+library(flextable)
+library(officer)
+library(ggpubr)
+#library(circlize)
+#library(RColorBrewer)
+# Simplified font handling - use default fonts for PDF to avoid scaling issues
+# library(extrafont)
+# library(showtext)
+
+earthtone_palette <- c(
+  "#990000",
+  "#6B4226",
+  "#A47551",
+  "#8A9A5B",
+  "#556B2F",
+  "#3B4D61",
+  "#B86B2A",
+  "#66435a"
+)
+
+# Base colors
+base_colors <- c(
+  "#4A4A4A", # deep slate gray (Foundation)
+  "#3A6F6A", # muted teal (Integration)
+  "#C6A15B"  # ochre gold (Leverage)
+)
+
+# Create 3-step gradients to white for each base color
+gradients <- lapply(base_colors, function(color) {
+  colorRampPalette(c(color, "white"))(5)[2:4]  # Take first 3 of 4 steps to white
+})
+
+# Naming the gradients for easy reference
+names(gradients) <- c("foundation", "integration", "leverage")
+
+# Original palette remains unchanged
+layers_palette <- base_colors
+
+# Set seed for reproducibility
+set.seed(123)
+```
+
+```{r data-loading}
+# Function to load and prepare data
+load_edgelist <- function(file_path) {
+  # Read the CSV file
+  edgelist <- read_csv(file_path, col_names = TRUE, show_col_types = FALSE)
+
+  # Basic data cleaning and preparation
+  data_prepared <- edgelist %>%
+    dplyr::select(
+      Group = group,
+      From = hex1,
+      To = hex2
+    ) %>%
+    dplyr::mutate(across(c(From, To), as.character))
+
+  # Add a weight column (count of identical edges)
+  data_prepared <- data_prepared %>%
+    group_by(Group, From, To) %>%
+    summarize(Weight = n(), .groups = 'drop')
+
+  # For undirected graphs, ensure consistent node ordering to avoid duplicates
+  # while preserving Group information
+  data_prepared <- data_prepared %>%
+    rowwise() %>%
+    mutate(
+      node1 = min(From, To),
+      node2 = max(From, To),
+      # Ensure Group is treated as character
+      Group = as.character(Group)
+    ) %>%
+    ungroup() %>%
+    select(Group, From = node1, To = node2, Weight) %>%
+    distinct()  # Remove any potential duplicates after normalization
+
+  return(data_prepared)
+}
+
+# File input UI (will be replaced with actual file path)
+file_path <- "CERFC-2025-09_recoded.csv"  # Default path, can be changed
+
+# Load the data
+data <- load_edgelist(file_path)
+
+```
+
+## Overview
+
+Community-engaged research has emerged as a vital approach to scholarship that challenges traditional academic boundaries by fostering genuine partnerships between universities and communities and holds a critical position in Pillar 2 of the Indiana University system-wide and Indiana University Indianapolis 2030 Strategic Plan. However, the field has long struggled with inconsistent definitions and unclear evaluation criteria that have hindered its recognition and advancement within academic institutions.
+
+The Community Engaged Research Faculty Circle (CERF-C) at Indiana University Indianapolis developed a comprehensive framework for community-engaged research (CEnR) through collaborative definition-building and analytical mapping of the field's conceptual landscape.
+
+## The Community Engaged Research Faculty Circle
+
+The Community Engaged Research Faculty Circle (CERF-C) is a faculty working group established in 2020 to advance the practice and scholarship of community-engaged research at Indiana University Indianapolis. CERF-C comprises faculty members from diverse disciplines who share a commitment to community engagement and collaborative research.
+
+```{r membership-table}
+
+member_df <- read_csv("contributors.csv", col_names = TRUE, show_col_types = FALSE) |>
+  arrange(last, first) |>
+  mutate(Name = str_c(first, last, sep = " ")) |>
+  select(Name, Unit)
+
+ft <- member_df |>
+  flextable() |>
+  flextable::theme_vanilla() %>%
+  flextable::fontsize(size = 12, part = "all") %>%
+  flextable::font(part = "header", fontname = "IBM Plex Sans Condensed") |>
+  flextable::bold(part = "header", bold = TRUE) |>
+  flextable::align(align = "left", part = "all") %>%
+  autofit()
+
+ft
+
+```
+
+## Core Definition
+
+The definition was developed through a two-stage process. In the first stage, members of the Community Engaged Research Faculty Circle drafted and refined candidate language through multiple rounds of discussion. In the second stage, the draft definition was subjected to a Delphi validation process with community stakeholders. This sequence ensured that the statement reflects both disciplinary consensus among faculty and validation from community partners, providing a definition that is conceptually robust and contextually grounded.
+
+```{=latex}
+\marginnote{%
+  \RaggedRight
+  \scriptsize Key:\\[4pt]
+  \badge{foundationvery} Foundation Very High\\
+  \badge{foundationhigh} Foundation High\\
+  \badge{integrationvery} Integration Very High\\
+  \badge{integrationhigh} Integration High\\
+  \badge{leveragevery} Leverage Very High\\
+  \badge{leveragehigh} Leverage High\\
+
+\normalsize
+}
+```
+
+Selected terms are accompanied by badges indicating their relative scores across three analytic dimensions—Foundation, Integration, and Leverage. These annotations reflect the conceptual analysis underpinning this framework, signaling how certain elements function as core, connective, or strategically influential within community engaged research at IU Indianapolis.
+
+```{=latex}
+\begin{adjustwidth}{0in}{-1.5in}
+\Large
+\linespread{2}\selectfont
+Community engaged research is scholarship carried out through \inlinebadgegroup{reciprocal partnerships}{\badge{integrationvery}\badge{leveragevery}} between researchers and community members grounded in \inlinebadgegroup{shared power and ownership}{\badge{foundationvery}\badge{integrationhigh}\badge{leveragehigh}}. It is oriented toward \inlinebadgegroup{collaborative inquiry and community priorities}{\badge{foundationhigh}\badge{integrationvery}\badge{leveragevery}}, leverages \inlinebadgegroup{community wisdom}{\badge{integrationvery}\badge{leveragevery}}, produces \inlinebadgegroup{meaningful change}{\badge{foundationhigh}\badge{integrationvery}\badge{leveragevery}}, and generates \inlinebadgegroup{a variety of outcomes and outputs}{\badge{foundationvery}\badge{integrationvery}\badge{leveragevery}} that advance \inlinebadgegroup{well-being}{\badge{integrationvery}\badge{leveragevery}} and \inlinebadgegroup{knowledge}{\badge{foundationhigh}\badge{integrationhigh}}.
+\normalsize
+\end{adjustwidth}
+```
+
+```{=html}
+<div class = "core-definition">
+  Community engaged research is scholarship carried out through
+  <span class="inline-badge-group">
+    <strong>reciprocal partnerships</strong>
+    <span class="badge-row">
+      <span class="quarto-badge badge-integration-very"></span>
+      <span class="quarto-badge badge-leverage-very"></span>
+    </span>
+  </span>
+  between researchers and community members grounded in
+  <span class="inline-badge-group">
+    <strong>shared power and ownership.</strong>
+    <span class="badge-row">
+      <span class="quarto-badge badge-foundation-very"></span>
+      <span class="quarto-badge badge-integration-high"></span>
+      <span class="quarto-badge badge-leverage-high"></span>
+    </span>
+  </span>
+  It is oriented toward
+    <span class="inline-badge-group">
+      <strong>collaborative inquiry and community priorities,</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-foundation-high"></span>
+        <span class="quarto-badge badge-integration-very"></span>
+        <span class="quarto-badge badge-leverage-very"></span>
+      </span>
+    </span>
+    leverages
+    <span class="inline-badge-group">
+      <strong>community wisdom,</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-integration-very"></span>
+        <span class="quarto-badge badge-leverage-very"></span>
+      </span>
+    </span>
+    produces
+    <span class="inline-badge-group">
+      <strong>meaningful change,</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-foundation-high"></span>
+        <span class="quarto-badge badge-integration-very"></span>
+        <span class="quarto-badge badge-leverage-very"></span>
+      </span>
+    </span>
+    and generates
+    <span class="inline-badge-group">
+      <strong>a variety of outcomes and outputs</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-foundation-very"></span>
+        <span class="quarto-badge badge-integration-very"></span>
+        <span class="quarto-badge badge-leverage-very"></span>
+      </span>
+    </span>
+    that advance
+    <span class="inline-badge-group">
+      <strong>well-being</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-integration-very"></span>
+        <span class="quarto-badge badge-leverage-very"></span>
+      </span>
+    </span>
+    and
+    <span class="inline-badge-group">
+      <strong>knowledge.</strong>
+      <span class="badge-row">
+        <span class="quarto-badge badge-foundation-high"></span>
+        <span class="quarto-badge badge-integration-high"></span>
+      </span>
+    </span>
+  </div>
+```
+
+### Seven Guiding Commitments
+
+::: {.content-visible when-format="pdf"}
+```{=latex}
+\begin{adjustwidth}{0in}{-1.5in}
+\begin{longtable}{p{2.5in}p{3.5in}}
+\toprule
+\highlight{1. Relational Investment}~\badge{integrationvery}\badge{leveragevery} & CEnR requires more time and sustained effort than traditional approaches to research to build trusting, collaborative relationships, which are essential to fulfilling the university's mission. \\
+\midrule
+\highlight{2. Reciprocal Benefit}~\badge{integrationvery}\badge{leveragevery} & Community engaged research creates conditions for mutual growth and transformation among all partners: researchers, community members, and organizations. Rather than simple exchanges, these partnerships foster shared learning, collective capacity building, and deepened relationships that strengthen all participants and their ability to create positive change together, both during and beyond the research process. \\
+\midrule
+\highlight{3. Values-Driven Practice}~\badge{foundationvery}\badge{integrationvery} & CEnR efforts are accountable to core values and commitments, including belonging, mutuality, transparency, and shared power and ownership while remaining anchored to the requirements and assumptions of the research methodologies employed. \\
+\midrule
+\highlight{4. Holistic Integration of Scholarship and Pedagogy}~\badge{leveragehigh} & Although CEnR is foremost a research activity, many engaged scholars integrate their research and teaching. Student growth and development---through authentic experiences and classroom practice---are woven into the work. \\
+\midrule
+\highlight{5. Product Pluralism}~\badge{integrationhigh}\badge{leveragevery} & CEnR results in a wide range of products---from the conventional scholarly article, conference presentation, or book chapter to the community-facing action plan, policy document, curriculum, public outreach effort, exhibit, or other intermediate and summative products---that are all considered valid and value-adding. \\
+\midrule
+\highlight{6. Knowledge and Material Outcomes}~\badge{foundationhigh}\badge{leveragevery} & CEnR aims both to co-create new knowledge and share it in ways that provide tangible value to partner communities, by offering actionable insights, fostering new perspectives, or contributing to meaningful benefits in their lives and their circumstances. \\
+\midrule
+\highlight{7. Partnership Pathways}~\badge{foundationhigh}\badge{leveragevery} & Community engaged research encompasses a spectrum of partnership approaches, from including communities in research processes to supporting fully community-owned research efforts. This trajectory recognizes that meaningful engagement can occur at multiple levels, allowing researchers and communities to find approaches that align with their capacity, interests, and goals while maintaining core commitments to reciprocity and shared benefit. \\
+\bottomrule
+\end{longtable}
+\end{adjustwidth}
+```
+:::
+
+::: {.content-visible when-format="html"}
+```{=html}
+<div class="five-commitments">
+  <table>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>1. Relational Investment</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-integration-very"></span>
+              <span class="quarto-badge badge-leverage-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>CEnR requires more time and sustained effort than traditional approaches to research to build trusting, collaborative relationships, which are essential to fulfilling the university's mission.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>2. Reciprocal Benefit</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-integration-very"></span>
+              <span class="quarto-badge badge-leverage-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>Community engaged research creates conditions for mutual growth and transformation among all partners: researchers, community members, and organizations. Rather than simple exchanges, these partnerships foster shared learning, collective capacity building, and deepened relationships that strengthen all participants and their ability to create positive change together, both during and beyond the research process.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>3. Values-Driven Practice</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-foundation-very"></span>
+              <span class="quarto-badge badge-integration-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>CEnR efforts are accountable to core values and commitments, including belonging, mutuality, transparency, and shared power and ownership while remaining anchored to the requirements and assumptions of the research methodologies employed.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>4. Holistic Integration of Scholarship and Pedagogy</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-leverage-high"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>Although CEnR is foremost a research activity, many engaged scholars integrate their research and teaching. Student growth and development&mdash;through authentic experiences and classroom practice&mdash;are woven into the work.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>5. Product Pluralism</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-integration-high"></span>
+              <span class="quarto-badge badge-leverage-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>CEnR results in a wide range of products&mdash;from the conventional scholarly article, conference presentation, or book chapter to the community-facing action plan, policy document, curriculum, public outreach effort, exhibit, or other intermediate and summative products&mdash;that are all considered valid and value-adding.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>6. Knowledge and Material Outcomes</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-foundation-high"></span>
+              <span class="quarto-badge badge-leverage-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>CEnR aims both to co-create new knowledge and share it in ways that provide tangible value to partner communities, by offering actionable insights, fostering new perspectives, or contributing to meaningful benefits in their lives and their circumstances.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="commitment-content">
+          <span class="inline-badge-group">
+            <strong>7. Partnership Pathways</strong>
+            <span class="badge-row">
+              <span class="quarto-badge badge-foundation-high"></span>
+              <span class="quarto-badge badge-leverage-very"></span>
+            </span>
+          </span>
+        </div>
+      </td>
+      <td>
+        <p>Community engaged research encompasses a spectrum of partnership approaches, from including communities in research processes to supporting fully community-owned research efforts. This trajectory recognizes that meaningful engagement can occur at multiple levels, allowing researchers and communities to find approaches that align with their capacity, interests, and goals while maintaining core commitments to reciprocity and shared benefit.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+```
+:::
+
+<!--
+## Strategic Implications
+
+Community engaged research stands as a cornerstone of Indiana University Indianapolis's 2030 Strategic Plan and public mission, yet its complex, interdisciplinary nature has traditionally challenged conventional resource allocation approaches. This analytical framework transforms that complexity into strategic clarity, revealing how targeted investments in specific conceptual domains can amplify institutional impact, enhance external funding competitiveness, and strengthen community partnerships that define public university excellence.
+
+The framework identifies distinct patterns across three critical dimensions—Foundation (conceptual centrality), Integration (structural connectivity), and Leverage (hierarchical influence)—that provide strategic guidance for resource allocation and institutional positioning.
+
+### Interpretation Framework
+
+Understanding how concepts score across the three analytical tiers enables targeted investment strategies with measurable institutional returns:
+
+**Foundation Tier** measures conceptual centrality—how fundamental a concept is to practitioners' understanding of CEnR. High-foundational concepts represent the field's core identity and require definitional clarity and values alignment to ensure institutional coherence.
+
+**Integration Tier** measures structural connectivity—how essential a concept is to the field's operational coherence. High-integration concepts serve as critical infrastructure that, when strengthened, enhance the entire CEnR ecosystem's functionality.
+
+**Leverage Tier** measures hierarchical influence—how much power a concept has to drive systemic change. High-leverage concepts represent strategic intervention points where modest investments yield disproportionate field-wide advancement.
+
+### Strategic Investment Categories
+
+#### System Integrators: The Counterintuitive Priority (Low Foundation + Very High Integration + Very High Leverage)
+
+**Examples**: Impact \& Outcomes, Student Engagement \& Development
+
+**Critical Discovery**: These concepts represent the most counterintuitive but strategically crucial finding—they function as the operational core of CEnR systems while remaining definitionally invisible. **Impact \& Outcomes** emerges as the paramount example, scoring at maximum levels for both Integration and Leverage despite minimal Foundation presence.
+
+**Strategic Priority**: Critical Investigation and Infrastructure Development (25-30% of CEnR resources)
+
+**Institutional Actions**:
+
+- Prioritize comprehensive impact measurement systems as flagship CEnR investment
+- Establish dedicated infrastructure for tracking and communicating impacts across academic and community domains
+- Investigate why these operationally crucial concepts lack definitional prominence
+- Systematize student engagement tracking and learning outcome measurement
+
+**Institutional Payoffs**: Enhanced external funding competitiveness, measurable community benefit documentation for accreditation and reputation, clear demonstration of public university value proposition through documented impact rather than assumed value.
+
+#### Integration Amplifiers: Operational Excellence (Medium Foundation + Very High Integration + Very High Leverage)
+
+**Examples**: Community Organizations, Community Partnerships \& Collaboration, Policy Outcomes
+
+**Strategic Priority**: High Development Investment (15-20% of CEnR resources)
+
+**Institutional Actions**:
+
+- Stabilize funding for community partnership coordination and organizational liaison work
+- Embed permanent administrative structures supporting community relationship management
+- Systematize policy impact tracking and partnership effectiveness measurement
+- Build relationship-building infrastructure and community liaison capacity
+
+**Institutional Payoffs**: Enhanced student recruitment through authentic experiential learning, strengthened community relationships supporting institutional reputation, documented policy influence enhancing legislative and donor relations.
+
+**Critical Interdependency**: These amplifiers require Values Infrastructure for legitimacy and benefit from System Integrator measurement approaches for accountability.
+
+#### Values Infrastructure: Very High Foundation + High Integration
+
+**Values & Principles**, **Governance**, **Faculty**, and **Public Outreach & Communication** provide ethical and operational foundation that legitimizes all other CEnR investments.
+
+- **Codify** clear governance structures and values statements for CEnR oversight
+- **Develop** faculty through targeted CEnR methodology and values training
+- **Communicate** institutional commitment through strategic outreach highlighting CEnR principles
+
+**Institutional Payoffs:** Enhanced institutional reputation for ethical community engagement, improved faculty satisfaction and retention through values alignment, strengthened community trust supporting long-term partnerships.
+
+**Critical Interdependency:** This infrastructure provides the legitimacy and ethical framework that makes Foundational Infrastructure investments credible and sustainable.
+
+#### Operational Bridges: High Integration + High Leverage
+
+**Research Methodology & Approach** and **Trust & Relationship Building** serve crucial translational functions, connecting foundational values with measurable outcomes.
+
+- **Invest** in methodology training and community relationship-building resources
+- **Support** faculty development in CEnR-specific research approaches
+- **Create** relationship-building infrastructure and community liaison capacity
+
+**Institutional Payoffs:** Enhanced research quality and community relationship sustainability, improved faculty capacity for competitive grant applications, stronger community partnerships supporting institutional mission.
+
+**Critical Interdependency:** These bridges are essential for scaling the Foundational Infrastructure and translating Values Infrastructure into tangible outcomes.
+
+#### Operational Bridges: Translational Infrastructure (High Foundation + High Integration + High Leverage)
+
+**Examples**: Trust \& Relationship Building, Research Methodology \& Approach
+
+**Strategic Priority**: Moderate Investment in Connectivity (10-15% of CEnR resources)
+
+**Institutional Actions**:
+
+- Invest in methodology training and community relationship-building resources
+- Support faculty development in CEnR-specific research approaches
+- Create systematic relationship-building protocols and community liaison training
+- Develop capacity for translating foundational values into operational outcomes
+
+**Institutional Payoffs**: Enhanced research quality and community relationship sustainability, improved faculty capacity for competitive grant applications, stronger community partnerships supporting institutional mission.
+
+### Tiered Investment Strategy
+
+#### **Tier 1: Immediate Strategic Priority**  (35-40% of total CEnR budget)
+*System Integrators requiring immediate attention*
+
+**Focus:** Maximum resource commitment with measurable accountability
+
+1. **Impact & Outcomes** - flagship institutional investment with comprehensive measurement systems
+2. **Student Engagement & Development** - core educational mission alignment with tracking infrastructure
+3. **Community Partnerships & Collaboration** - external relationship infrastructure
+4. **Policy Outcomes** - measurable institutional influence
+5. **Community Organizations** - partner relationship management
+
+**Expected Return:** National leadership positioning, enhanced funding competitiveness, measurable community impact documentation that transforms institutional reputation.
+
+#### **Tier 2: Sustained Foundation Building** (25-30% of total CEnR budget)
+*Foundational Capacity Building ensuring institutional legitimacy*
+
+**Focus:** Steady, reliable support ensuring institutional legitimacy and coherence
+
+- **Values & Principles** - ethical framework maintenance and articulation
+- **Governance** - structural oversight and accountability systems
+- **Faculty** - human capital development and capacity building
+- **Public Outreach & Communication** - institutional visibility and community engagement
+
+**Expected Return:** Enhanced institutional reputation, improved community relations, faculty satisfaction and retention, credible foundation for all other investments.
+
+#### **Tier 3: Targeted Operational Support**  (20-25% of total CEnR budget)
+*Integration Amplifiers and Operational Bridges*
+
+**Focus:** Consistent operational support enabling system functionality
+
+- **Community Organizations and Partnerships** - external relationship infrastructure
+- **Policy Outcomes** - measurable institutional influence tracking
+- **Trust \& Relationship Building** - community relationship maintenance
+- **Research Methodology \& Approach** - faculty capacity and research quality
+
+**Expected Return:** Sustained community partnerships, improved research quality and competitiveness, operational excellence supporting Tier 1 and Tier 2 investments.
+
+### Implementation Roadmap
+
+#### **For University Administrators**
+
+**Year 1: Foundation Setting and System Integrator Expansion**
+
+- **Launch** comprehensive impact measurement systems (addressing the *Counterintuitive Priority*)
+- **Establish** student engagement tracking and reciprocal community partnership liaison roles and guidelines
+- **Codify** CEnR governance structures and values frameworks
+
+**Years 2-3: Integration Development**
+
+- **Build** permanent administrative and peer support connecting foundational values to operational practice
+- **Implement** faculty development programs integrating CEnR methodology and values
+- **Document** policy influence tracking and relationship management protocols for institutional advancement
+
+**Years 4-5: Strategic Leadership**
+
+- **Integrate** CEnR metrics into institutional assessment and strategic planning
+- **Secure** endowed support for high-leverage community partnerships based on demonstrated impact
+- **Establish** national recognition as a leading CEnR institution through documented excellence
+
+#### **For Community-Engaged Researchers**
+
+**Advocacy Strategy:**
+
+- **Leverage Foundation Concepts**, such as Values \& Principles and Governance, as credibility anchors while demonstrating need for operational development
+- **Emphasize System Integrators**, including Impact \& Outcomes and Student Engagement, as operational necessities rather than definitional elements, highlighting their Infrastructure and Leverage scores for institutional reputation and competitiveness
+- **Frame Student Engagement and Community Partnerships** as infrastructure investments that enhance the institution's educational mission and community standing
+- **Connect** research requests to administrative priorities by demonstrating how CEnR projects contribute to measurable institutional outcomes
+
+**Grant Strategy:**
+
+- **Align** proposals with Tier 1 concepts to maximize institutional support and co-investment
+- **Demonstrate** how individual projects strengthen the field's critical infrastructure elements
+- **Leverage** the interdependency framework by showing how methodology development (Tier 3) enables infrastructure building (Tier 2) that produces measurable impacts (Tier 1)
+
+This strategic framework transforms analytical complexity into actionable institutional guidance, ensuring that resource allocation decisions align with the conceptual architecture that maximizes community-engaged research effectiveness while advancing core institutional priorities.
+-->
+
+## Process and Methods
+
+### Collaborative Data Collection
+
+Hexagons are Fun and Functional
+
+### Data Recoding and Consolidation
+
+### Correspondence (Foundational) Analysis
+
+### Network (Integrational) Analysis
+
+### Key Actor (Leverage) Analysis
+
+### Open Edits
+
+### Adapted Delphi Validation Process

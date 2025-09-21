@@ -1,0 +1,100 @@
+group,hex1,hex2
+1,Public Outreach & Communication,Conferences
+1,Public Outreach & Communication,Conventional Scholarly Publications
+1,Public Outreach & Communication,Exhibits
+1,Exhibits,Public Outreach & Communication
+1,Exhibits,Conventional Scholarly Publications
+1,Conventional Scholarly Publications,Hard To Categorize Products
+1,Conventional Scholarly Publications,Public Outreach & Communication
+1,Conventional Scholarly Publications,Policy Outcomes
+1,Conventional Scholarly Publications,Reports
+1,Conventional Scholarly Publications,Public Outreach & Communication
+1,Conventional Scholarly Publications,Public Outreach & Communication
+1,Conventional Scholarly Publications,Hard To Categorize Products
+1,Conventional Scholarly Publications,Action Plans
+1,Conferences,Hard To Categorize Products
+1,Conferences,Reports
+1,Conferences,Public Outreach & Communication
+1,Conferences,Public Outreach & Communication
+1,Conferences,Hard To Categorize Products
+1,Conferences,Action Plans
+1,Policy Outcomes,Hard To Categorize Products
+1,Policy Outcomes,Reports
+1,Policy Outcomes,Public Outreach & Communication
+1,Policy Outcomes,Public Outreach & Communication
+1,Policy Outcomes,Hard To Categorize Products
+1,Policy Outcomes,Action Plans
+1,Policy Outcomes,Public Outreach & Communication
+1,Policy Outcomes,Impact & Outcomes
+1,Policy Outcomes,Student Engagement & Development
+1,Public Outreach & Communication,Institutional Resources & Funding
+1,Public Outreach & Communication,Impact & Outcomes
+1,Institutional Resources & Funding,Impact & Outcomes
+1,Institutional Resources & Funding,Youth
+1,Institutional Resources & Funding,Community Partnerships & Collaboration
+1,Impact & Outcomes,Community Partnerships & Collaboration
+1,Impact & Outcomes,Community Partnerships & Collaboration
+1,Impact & Outcomes,Student Engagement & Development
+1,Community Partnerships & Collaboration,Student Engagement & Development
+1,Community Partnerships & Collaboration,Community Partnerships & Collaboration
+1,Student Engagement & Development,Community Partnerships & Collaboration
+1,Student Engagement & Development,Student Engagement & Development
+2,Community Organizations,Quality of Life & Well-being
+2,Community Organizations,Impact & Outcomes
+2,Community Organizations,Values & Principles
+2,Community Organizations,Governance
+2,Quality of Life & Well-being,Impact & Outcomes
+2,Quality of Life & Well-being,Values & Principles
+2,Impact & Outcomes,Governance
+2,Values & Principles,Governance
+2,Impact & Outcomes,Trust & Relationship Building
+2,Values & Principles,Trust & Relationship Building
+2,Governance,Governance
+2,Governance,Faculty
+2,Governance,Student Engagement & Development
+2,Governance,Values & Principles
+2,Governance,Values & Principles
+2,Faculty,Student Engagement & Development
+2,Faculty,Values & Principles
+2,Faculty,Values & Principles
+2,Faculty,Impact & Outcomes
+2,Student Engagement & Development,Values & Principles
+2,Student Engagement & Development,Values & Principles
+2,Student Engagement & Development,Impact & Outcomes
+2,Trust & Relationship Building,Trust & Relationship Building
+2,Trust & Relationship Building,Quality of Life & Well-being
+3,Impact & Outcomes,Research Methodology & Approach
+3,Impact & Outcomes,Trust & Relationship Building
+3,Impact & Outcomes,Trust & Relationship Building
+3,Research Methodology & Approach,Trust & Relationship Building
+3,Research Methodology & Approach,Trust & Relationship Building
+3,Research Methodology & Approach,Research Methodology & Approach
+3,Research Methodology & Approach,Community Partnerships & Collaboration
+3,Trust & Relationship Building,Community Partnerships & Collaboration
+3,Trust & Relationship Building,Community Partnerships & Collaboration
+3,Trust & Relationship Building,Community Partnerships & Collaboration
+3,Trust & Relationship Building,Community Partnerships & Collaboration
+3,Trust & Relationship Building,Data Management & Sharing
+3,Trust & Relationship Building,Data Management & Sharing
+3,Research Methodology & Approach,Community Partnerships & Collaboration
+3,Research Methodology & Approach,Community Organizations
+3,Community Partnerships & Collaboration,Community Organizations
+3,Community Partnerships & Collaboration,Student Engagement & Development
+3,Community Partnerships & Collaboration,Community Partnerships & Collaboration
+3,Community Organizations,Educational Institutions & Partners
+3,Community Organizations,Student Engagement & Development
+3,Community Partnerships & Collaboration,Youth
+3,Data Management & Sharing,Community Partnerships & Collaboration
+3,Student Engagement & Development,Educational Institutions & Partners
+3,Student Engagement & Development,Educational Institutions & Partners
+3,Student Engagement & Development,Pedagogy
+3,Student Engagement & Development,Youth
+3,Educational Institutions & Partners,Educational Institutions & Partners
+3,Educational Institutions & Partners,Pedagogy
+3,Pedagogy,Educational Institutions & Partners
+3,Research Methodology & Approach,Access & Equity
+3,Access & Equity,Implementation Challenges
+3,Implementation Challenges,Implementation Challenges
+3,Implementation Challenges,Implementation Challenges
+3,Implementation Challenges,Conventional Scholarly Publications
+3,Implementation Challenges,Conventional Scholarly Publications
